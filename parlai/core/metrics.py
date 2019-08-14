@@ -18,17 +18,21 @@ from numbers import Number
 
 import re
 
-DEFAULT_METRICS = {'correct', 'bleu', 'accuracy', 'f1'}
+DEFAULT_METRICS = {'correct', 'bleu', 'accuracy', 'f1', 'nist', 'meteor'}
 ROUGE_METRICS = {'rouge-1', 'rouge-2', 'rouge-L'}
 ALL_METRICS = DEFAULT_METRICS | ROUGE_METRICS
 
 
 try:
     from nltk.translate import bleu_score as nltkbleu
+    from nltk.translate import nist_score as nltknist
+    from nltk.translate import meteor_score as nltkmeteor
 except ImportError:
     # User doesn't have nltk installed, so we can't use it for bleu
     # We'll just turn off things, but we might want to warn the user
     nltkbleu = None
+    nltknist = None
+    nltkmeteor = None
 
 try:
     import rouge as rouge
@@ -161,6 +165,28 @@ def _bleu(guess, answers):
         [normalize_answer(a).split(" ") for a in answers],
         normalize_answer(guess).split(" "),
         smoothing_function=nltkbleu.SmoothingFunction(epsilon=1e-12).method1,
+    )
+
+
+def _nist(guess, answers):
+    """Compute approximate NIST score between guess and a set of answers."""
+    if nltknist is None:
+        # nist library not installed, just return a default value
+        return None
+    return nltknist.sentence_nist(
+        [normalize_answer(a).split(" ") for a in answers],
+        normalize_answer(guess).split(" "),
+    )
+
+
+def _meteor(guess, answers):
+    """Compute approximate METEOR score between guess and a set of answers."""
+    if nltkmeteor is None:
+        # meteor library not installed, just return a default value
+        return None
+    return nltkmeteor.meteor_score(
+        [normalize_answer(a).split(" ") for a in answers],
+        normalize_answer(guess).split(" "),
     )
 
 
@@ -335,6 +361,10 @@ class Metrics(object):
                 f1 = _f1_score(prediction, labels)
             if 'bleu' in self.metrics_list:
                 bleu = _bleu(prediction, labels)
+            if 'nist' in self.metrics_list:
+                nist = _nist(prediction, labels)
+            if 'meteor' in self.metrics_list:
+                meteor = _meteor(prediction, labels)
             if 'rouge' in self.metrics_list:
                 rouge1, rouge2, rougeL = _rouge(prediction, labels)
 
@@ -345,6 +375,12 @@ class Metrics(object):
                 if 'bleu' in self.metrics:
                     self.metrics['bleu'] += bleu
                     self.metrics['bleu_cnt'] += 1
+                if 'nist' in self.metrics:
+                    self.metrics['nist'] += nist
+                    self.metrics['nist_cnt'] += 1
+                if 'meteor' in self.metrics:
+                    self.metrics['meteor'] += meteor
+                    self.metrics['meteor_cnt'] += 1
                 if 'rouge-L' in self.metrics:
                     self.metrics['rouge-1'] += rouge1
                     self.metrics['rouge-1_cnt'] += 1
