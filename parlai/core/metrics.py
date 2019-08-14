@@ -28,8 +28,7 @@ try:
     from nltk.translate import nist_score as nltknist
     from nltk.translate import meteor_score as nltkmeteor
 except ImportError:
-    # User doesn't have nltk installed, so we can't use it for bleu
-    # We'll just turn off things, but we might want to warn the user
+    warn_once('BLEU/NIST/METEOR metrics require nltk. Please run `pip install nltk`.')
     nltkbleu = None
     nltknist = None
     nltkmeteor = None
