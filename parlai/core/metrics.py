@@ -184,8 +184,8 @@ def _meteor(guess, answers):
         # meteor library not installed, just return a default value
         return None
     return nltkmeteor.meteor_score(
-        [normalize_answer(a).split(" ") for a in answers],
-        normalize_answer(guess).split(" "),
+        [normalize_answer(a) for a in answers],
+        normalize_answer(guess),
     )
 
 
