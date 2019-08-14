@@ -172,10 +172,13 @@ def _nist(guess, answers):
     if nltknist is None:
         # nist library not installed, just return a default value
         return None
-    return nltknist.sentence_nist(
-        [normalize_answer(a).split(" ") for a in answers],
-        normalize_answer(guess).split(" "),
-    )
+    try:
+        return nltknist.sentence_nist(
+            [normalize_answer(a).split(" ") for a in answers],
+            normalize_answer(guess).split(" "),
+        )
+    except:
+        return 0
 
 
 def _meteor(guess, answers):
