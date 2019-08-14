@@ -17,9 +17,9 @@ Examples
 """
 
 from parlai.core.params import ParlaiParser, print_announcements
-from parlai.core.agents import create_agent
+from parlai.core.agents import create_agent, Teacher
 from parlai.core.logs import TensorboardLogger
-from parlai.core.metrics import aggregate_task_reports
+from parlai.core.metrics import aggregate_task_reports, calc_diversity, calc_entropy
 from parlai.core.worlds import create_task
 from parlai.core.utils import TimeLogger
 
@@ -77,10 +77,15 @@ def _eval_single_world(opt, agent, task):
     # max number of examples to evaluate
     max_cnt = opt['num_examples'] if opt['num_examples'] > 0 else float('inf')
     cnt = 0
+    num_agents = len(world.get_agents())
+    all_observations = []
 
     while not world.epoch_done() and cnt < max_cnt:
         cnt += opt.get('batchsize', 1)
         world.parley()
+        for agent_idx in range(num_agents):
+            if not isinstance(world.agents[agent_idx], Teacher):
+                all_observations += [o['text'] for o in world.batch_observations[agent_idx]]
         if opt['display_examples']:
             # display examples
             print(world.display() + '\n~~')
@@ -90,6 +95,9 @@ def _eval_single_world(opt, agent, task):
             print(text)
 
     report = world.report()
+    report['entropy_4'] = calc_entropy(all_observations)
+    report['distinct_1'], report['distinct_2'] = calc_diversity(all_observations)
+
     world.reset()
     return report
 

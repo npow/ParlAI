@@ -12,10 +12,11 @@ between processes.
 
 from parlai.core.thread_utils import SharedTable
 from parlai.core.utils import round_sigfigs, no_lock
-from collections import Counter
+from collections import Counter, defaultdict
 from parlai.core.utils import warn_once
 from numbers import Number
 
+import numpy as np
 import re
 
 DEFAULT_METRICS = {'correct', 'bleu', 'accuracy', 'f1', 'nist', 'meteor'}
@@ -212,6 +213,41 @@ def _rouge(guess, answers):
     scores_rouge2 = [score['rouge-2']['r'] for score in scores]
     scores_rougeL = [score['rouge-l']['r'] for score in scores]
     return max(scores_rouge1), max(scores_rouge2), max(scores_rougeL)
+
+
+def calc_diversity(guesses):
+	tokens = [0.0,0.0]
+	types = [defaultdict(int),defaultdict(int)]
+	for line in guesses:
+		words = line.strip('\n').split()
+		for n in range(2):
+			for idx in range(len(words)-n):
+				ngram = ' '.join(words[idx:idx+n+1])
+				types[n][ngram] = 1
+				tokens[n] += 1
+	div1 = len(types[0].keys())/tokens[0]
+	div2 = len(types[1].keys())/tokens[1]
+	return [div1, div2]
+
+
+def calc_entropy(guesses):
+	# based on Yizhe Zhang's code
+	etp_score = [0.0,0.0,0.0,0.0]
+	counter = [defaultdict(int),defaultdict(int),defaultdict(int),defaultdict(int)]
+	i = 0
+	for line in guesses:
+		words = line.strip('\n').split()
+		for n in range(4):
+			for idx in range(len(words)-n):
+				ngram = ' '.join(words[idx:idx+n+1])
+				counter[n][ngram] += 1
+
+	for n in range(4):
+		total = sum(counter[n].values())
+		for v in counter[n].values():
+			etp_score[n] += - v /total * (np.log(v) - np.log(total))
+
+	return etp_score
 
 
 def aggregate_metrics(reporters):
