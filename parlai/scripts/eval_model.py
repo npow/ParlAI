@@ -77,15 +77,16 @@ def _eval_single_world(opt, agent, task):
     # max number of examples to evaluate
     max_cnt = opt['num_examples'] if opt['num_examples'] > 0 else float('inf')
     cnt = 0
-    num_agents = len(world.get_agents())
+    num_agents = len(world.world.get_agents())
     all_observations = []
 
     while not world.epoch_done() and cnt < max_cnt:
         cnt += opt.get('batchsize', 1)
         world.parley()
         for agent_idx in range(num_agents):
-            if not isinstance(world.agents[agent_idx], Teacher):
-                all_observations += [o['text'] for o in world.batch_observations[agent_idx]]
+            if not isinstance(world.world.agents[agent_idx], Teacher):
+                all_observations += [o['text'] for o in world.batch_observations[agent_idx] if not o['episode_done']]
+
         if opt['display_examples']:
             # display examples
             print(world.display() + '\n~~')
@@ -95,7 +96,7 @@ def _eval_single_world(opt, agent, task):
             print(text)
 
     report = world.report()
-    report['entropy_4'] = calc_entropy(all_observations)
+    report['entropy_1'], report['entropy_2'], report['entropy_3'], report['entropy_4'] = calc_entropy(all_observations)
     report['distinct_1'], report['distinct_2'] = calc_diversity(all_observations)
 
     world.reset()
