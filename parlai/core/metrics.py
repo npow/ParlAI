@@ -337,6 +337,8 @@ class Metrics(object):
             elif each_m == 'bleu' and nltkbleu is None:
                 # only compute bleu if we can
                 pass
+            elif each_m == 'grounding':
+                self.metrics_list.update(['g_precision', 'g_recall', 'g_f1'])
             else:
                 self.metrics_list.add(each_m)
         metrics_list = (
