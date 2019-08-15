@@ -348,7 +348,8 @@ class FixedDialogTeacher(Teacher):
             self.lastYs[self.batchindex] = None
 
         if hasattr(self, 'lastY') and self.lastY is not None:
-            self.metrics.update(observation, self.lastY)
+            knowledge = self.get(self.episode_idx).get('checked_sentence')
+            self.metrics.update(observation, self.lastY, knowledge)
             self.lastY = None
         return observation
 

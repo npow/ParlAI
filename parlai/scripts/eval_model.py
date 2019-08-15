@@ -19,7 +19,7 @@ Examples
 from parlai.core.params import ParlaiParser, print_announcements
 from parlai.core.agents import create_agent, Teacher
 from parlai.core.logs import TensorboardLogger
-from parlai.core.metrics import aggregate_task_reports, calc_diversity, calc_entropy
+from parlai.core.metrics import aggregate_task_reports, calc_diversity, calc_entropy, calc_len
 from parlai.core.worlds import create_task
 from parlai.core.utils import TimeLogger
 
@@ -98,6 +98,7 @@ def _eval_single_world(opt, agent, task):
     report = world.report()
     report['entropy_1'], report['entropy_2'], report['entropy_3'], report['entropy_4'] = calc_entropy(all_observations)
     report['distinct_1'], report['distinct_2'] = calc_diversity(all_observations)
+    report['avg_len'] = calc_len(all_observations)
 
     world.reset()
     return report

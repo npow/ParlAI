@@ -15,14 +15,16 @@ from parlai.core.utils import round_sigfigs, no_lock
 from collections import Counter, defaultdict
 from parlai.core.utils import warn_once
 from numbers import Number
+from nltk.corpus import stopwords
 
 import numpy as np
 import re
 
-DEFAULT_METRICS = {'correct', 'bleu', 'accuracy', 'f1', 'nist', 'meteor'}
+DEFAULT_METRICS = {'correct', 'bleu', 'accuracy', 'f1', 'nist', 'meteor', 'grounding'}
 ROUGE_METRICS = {'rouge-1', 'rouge-2', 'rouge-L'}
 ALL_METRICS = DEFAULT_METRICS | ROUGE_METRICS
 
+STOP_WORDS = set(stopwords.words('english'))
 
 try:
     from nltk.translate import bleu_score as nltkbleu
@@ -253,6 +255,24 @@ def calc_entropy(guesses):
 	return etp_score
 
 
+def calc_len(guesses):
+	l = []
+	for line in guesses:
+		l.append(len(line.strip('\n').split()))
+	return np.mean(l)
+
+
+def calc_grounding(response, document):
+    response_tokens = set(normalize_answer(response).split(" ")) - STOP_WORDS
+    context_tokens = set() #set(normalize_answer(context).split(" ")) - STOP_WORDS
+    document_tokens = set(normalize_answer(document).split(" ")) - STOP_WORDS
+    num_match = len((response_tokens & document_tokens) - context_tokens)
+    precision = num_match / len(response_tokens)
+    recall = num_match / len(document_tokens)
+    f1 = 2 * (precision * recall) / (precision + recall)
+    return precision, recall, f1
+
+
 def aggregate_metrics(reporters):
     """Aggregate metrics from multiple reports."""
     # reporters is a list of teachers or worlds
@@ -378,7 +398,7 @@ class Metrics(object):
                         self.metrics['hits@' + str(k)] += 1
                 self.metrics['hits@_cnt'] += 1
 
-    def update(self, observation, labels):
+    def update(self, observation, labels, knowledge=None):
         """Update metrics based on an observation and true labels."""
         with self._lock():
             self.metrics['cnt'] += 1
@@ -405,6 +425,8 @@ class Metrics(object):
                 meteor = _meteor(prediction, labels)
             if 'rouge' in self.metrics_list:
                 rouge1, rouge2, rougeL = _rouge(prediction, labels)
+            if 'grounding' in self.metrics_list and knowledge is not None:
+                g_precision, g_recall, g_f1 = calc_grounding(prediction, knowledge)
 
             with self._lock():
                 if 'f1' in self.metrics:
@@ -426,6 +448,13 @@ class Metrics(object):
                     self.metrics['rouge-2_cnt'] += 1
                     self.metrics['rouge-L'] += rougeL
                     self.metrics['rouge-L_cnt'] += 1
+                if 'grounding' in self.metrics:
+                    self.metrics['g_precision'] += g_precision
+                    self.metrics['g_precision_cnt'] += 1
+                    self.metrics['g_recall'] += g_recall
+                    self.metrics['g_recall_cnt'] += 1
+                    self.metrics['g_f1'] += g_f1
+                    self.metrics['g_f1_cnt'] += 1
 
         # Ranking metrics.
         self._update_ranking_metrics(observation, labels)
@@ -481,7 +510,7 @@ class Metrics(object):
                         3,
                     )
             for k in self.metrics_list:
-                if self.metrics[k + '_cnt'] > 0 and k != 'correct' and k != 'f1':
+                if self.metrics[k + '_cnt'] > 0 and k not in ['correct', 'f1']:
                     m[k] = round_sigfigs(
                         self.metrics[k] / max(1, self.metrics[k + '_cnt']), 4
                     )
