@@ -341,7 +341,7 @@ class FixedDialogTeacher(Teacher):
         # TODO: mark as abstract, get rid of runtime error.
         raise RuntimeError('"Get" method must be overriden by children.')
 
-    def observe(self, observation):
+    def observe(self, observation, context=None):
         """Process observation for metrics."""
         if self.use_batch_act:
             self.lastY = self.lastYs[self.batchindex]
@@ -349,7 +349,7 @@ class FixedDialogTeacher(Teacher):
 
         if hasattr(self, 'lastY') and self.lastY is not None:
             knowledge = self.get(self.episode_idx).get('checked_sentence')
-            self.metrics.update(observation, self.lastY, knowledge)
+            self.metrics.update(observation, self.lastY, knowledge=knowledge, context=context)
             self.lastY = None
         return observation
 
