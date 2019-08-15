@@ -52,7 +52,7 @@ try:
     from torch.multiprocessing import Process, Value, Condition, Semaphore
 except ImportError:
     from multiprocessing import Process, Value, Semaphore, Condition  # noqa: F401
-from parlai.core.agents import _create_task_agents, create_agents_from_shared
+from parlai.core.agents import _create_task_agents, create_agents_from_shared, Teacher
 from parlai.core.metrics import aggregate_metrics
 from parlai.core.utils import Message, Timer, display_messages
 from parlai.tasks.tasks import ids_to_tasks
@@ -685,7 +685,12 @@ class BatchWorld(World):
                 if index == index_acting:
                     return None  # don't observe yourself talking
                 observation = validate(batch_actions[i])
-            observation = agents[index].observe(observation)
+            if isinstance(agents[index], Teacher):
+                other_index = (index + 1) % len(agents)
+                context = agents[other_index].history.get_history_str()
+                observation = agents[index].observe(observation, context)
+            else:
+                observation = agents[index].observe(observation)
             if observation is None:
                 raise ValueError('Agents should return what they observed.')
             batch_observations.append(observation)
