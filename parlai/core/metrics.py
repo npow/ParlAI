@@ -269,7 +269,7 @@ def calc_grounding(response, document):
     num_match = len((response_tokens & document_tokens) - context_tokens)
     precision = num_match / len(response_tokens)
     recall = num_match / len(document_tokens)
-    f1 = 2 * (precision * recall) / (precision + recall)
+    f1 = 2 * (precision * recall) / (precision + recall) if num_match > 0 else 0
     return precision, recall, f1
 
 
@@ -427,7 +427,7 @@ class Metrics(object):
                 meteor = _meteor(prediction, labels)
             if 'rouge' in self.metrics_list:
                 rouge1, rouge2, rougeL = _rouge(prediction, labels)
-            if 'grounding' in self.metrics_list and knowledge is not None:
+            if 'g_f1' in self.metrics_list and knowledge is not None:
                 g_precision, g_recall, g_f1 = calc_grounding(prediction, knowledge)
 
             with self._lock():
@@ -450,7 +450,7 @@ class Metrics(object):
                     self.metrics['rouge-2_cnt'] += 1
                     self.metrics['rouge-L'] += rougeL
                     self.metrics['rouge-L_cnt'] += 1
-                if 'grounding' in self.metrics:
+                if 'g_f1' in self.metrics_list:
                     self.metrics['g_precision'] += g_precision
                     self.metrics['g_precision_cnt'] += 1
                     self.metrics['g_recall'] += g_recall
