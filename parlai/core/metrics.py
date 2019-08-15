@@ -262,9 +262,9 @@ def calc_len(guesses):
 	return np.mean(l)
 
 
-def calc_grounding(response, document):
+def calc_grounding(response, document, context):
     response_tokens = set(normalize_answer(response).split(" ")) - STOP_WORDS
-    context_tokens = set() #set(normalize_answer(context).split(" ")) - STOP_WORDS
+    context_tokens = set(normalize_answer(context or '').split(" ")) - STOP_WORDS
     document_tokens = set(normalize_answer(document).split(" ")) - STOP_WORDS
     num_match = len((response_tokens & document_tokens) - context_tokens)
     precision = num_match / len(response_tokens)
@@ -400,7 +400,7 @@ class Metrics(object):
                         self.metrics['hits@' + str(k)] += 1
                 self.metrics['hits@_cnt'] += 1
 
-    def update(self, observation, labels, knowledge=None):
+    def update(self, observation, labels, knowledge=None, context=None):
         """Update metrics based on an observation and true labels."""
         with self._lock():
             self.metrics['cnt'] += 1
@@ -428,7 +428,7 @@ class Metrics(object):
             if 'rouge' in self.metrics_list:
                 rouge1, rouge2, rougeL = _rouge(prediction, labels)
             if 'g_f1' in self.metrics_list and knowledge is not None:
-                g_precision, g_recall, g_f1 = calc_grounding(prediction, knowledge)
+                g_precision, g_recall, g_f1 = calc_grounding(prediction, knowledge, context)
 
             with self._lock():
                 if 'f1' in self.metrics:
